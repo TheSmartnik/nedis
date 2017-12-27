@@ -1,12 +1,13 @@
 require 'timeout'
 require 'redis'
+require 'nedis/server'
 
-TEST_PORT = 6380
+TEST_PORT = 6379
 
 describe 'Nedis', :acceptance do
  it 'responds to ping' do
    with_server do
-     expect(client.ping).to eq("OK")
+     expect(client.ping).to eq("PONG")
    end
  end
 
@@ -14,17 +15,17 @@ describe 'Nedis', :acceptance do
    Redis.new(host: '127.0.0.1', port: TEST_PORT)
  end
 
-  def with_server
-     Thread.report_on_exception = true
+ def with_server
+   Thread.report_on_exception = true
 
-     server_thread = Thread.new do
-       server = Nedis::Server.new(TEST_PORT)
-       server.listen
-     end
+   server_thread = Thread.new do
+     server = Nedis::Server.new(TEST_PORT)
+     server.listen
+   end
 
-     wait_for_open_port TEST_PORT
+   wait_for_open_port TEST_PORT
      
-     yield  
+   yield  
   rescue TimeoutError
     sleep 0.01
     server_thread.value unless server_thread.alive?
