@@ -6,26 +6,45 @@ require 'pry'
 TEST_PORT = 6381
 
 describe 'Nedis', :acceptance do
- it 'responds to ping' do
-   with_server do
-     expect(client.ping).to eq("PONG")
-   end
- end
+  it 'responds to ping' do
+    with_server do
+      c = client
 
- def client
-   Redis.new(host: '127.0.0.1', port: TEST_PORT)
- end
+      c.without_reconnect do
+        expect(c.ping).to eq("PONG")
+        expect(c.ping).to eq("PONG")
+      end
+    end
+  end
 
- def with_server
-   Thread.report_on_exception = true
+  it 'echoes messages' do
+    with_server do
+      expect(client.echo("Hello \n World!")).to eq ("Hello \n World!")
+    end
+  end
 
-   server_thread = Thread.new do
-     server = Nedis::Server.new(TEST_PORT)
-     server.listen
-   end
+  it 'supports multiple clients' do
+    with_server do
+      expect(client.echo("Hello \n World!")).to eq ("Hello \n World!")
+      expect(client.echo("Hello \n World!")).to eq ("Hello \n World!")
+    end
+  end
 
-   wait_for_open_port TEST_PORT
-   yield
+  def client
+    Redis.new(host: '127.0.0.1', port: TEST_PORT)
+  end
+
+  def with_server
+    Thread.report_on_exception = true
+
+    server_thread = Thread.new do
+      server = Nedis::Server.new(TEST_PORT)
+      server.listen
+    end
+
+    wait_for_open_port TEST_PORT
+
+    yield
   rescue TimeoutError
     sleep 0.01
     server_thread.value unless server_thread.alive?
